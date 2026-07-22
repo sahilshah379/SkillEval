@@ -23,6 +23,7 @@ class Skill(ABC):
     name: str
     description: str          # shown to the agent when it picks skills
     modalities: list          # subset of: text, image, audio, video
+    thread_safe = False       # True only if run() can execute concurrently (no shared model state)
 
     @abstractmethod
     def run(self, video_path, **kwargs) -> dict:

@@ -20,6 +20,7 @@ class AudioEvents(Skill):
         "and missing/unexpected audio. args: none. (Heuristic — corroborate content with asr.)"
     )
     modalities = ["audio", "video"]
+    thread_safe = True  # numpy only, no shared state
 
     def run(self, video_path, **kwargs):
         wav = extract_audio(ensure_local(video_path))

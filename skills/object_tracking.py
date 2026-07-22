@@ -17,6 +17,7 @@ class ObjectTracking(Skill):
         "default 0), end (float sec, optional), step (float sec between samples, default 0.2)."
     )
     modalities = ["video"]
+    thread_safe = True  # fresh tracker + capture per call
 
     def run(self, video_path, box=None, start=0.0, end=None, step=0.2, **kwargs):
         if not box or len(box) != 4:

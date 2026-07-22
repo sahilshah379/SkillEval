@@ -14,6 +14,7 @@ class VLMFrameQA(Skill):
         "args: question (str), num_frames (int, default 6), start (float sec), end (float sec)."
     )
     modalities = ["video", "image"]
+    thread_safe = True  # fresh LLM conversation per call, no shared state
 
     def run(self, video_path, question="Describe any visual quality issues in these frames.",
             num_frames=6, start=None, end=None, **kwargs):

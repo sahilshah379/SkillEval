@@ -13,12 +13,19 @@ config.yaml, skills come from the skills/ registry, and this runner only
 orchestrates.
 """
 import json
+import threading
+from collections import defaultdict
 
 from skills import get_skill, skill_catalog
 from utils.LLM import LLM
 
 from agent.state import AgentState, Evidence, Localization, Verdict
 from agent.stopping import should_stop
+
+
+# most skill backends (mediapipe, easyocr, torch, ...) are not thread-safe;
+# serialize calls per skill unless the skill declares itself thread_safe
+_SKILL_LOCKS = defaultdict(threading.Lock)
 
 
 def _resolve_refs(value, refs):
@@ -44,7 +51,8 @@ class AgentRunner:
                 inputs[f"input_{modality.rstrip('s')}_{j}"] = url
         state = AgentState(video=str(video_path), issue=issue,
                            prompt=sample.get("prompt", ""), inputs=inputs)
-        llm = LLM()  # one conversation per investigation: history spans all iterations
+        # one conversation per investigation: history spans all iterations
+        llm = LLM(model=self.cfg["model"]) if self.cfg.get("model") else LLM()
 
         while True:
             reason = should_stop(state, self.cfg)
@@ -102,7 +110,12 @@ class AgentRunner:
             args = action.get("args", {})
             try:
                 skill = get_skill(action["skill"])
-                result = skill.run(state.video, **_resolve_refs(args, state.inputs))
+                resolved = _resolve_refs(args, state.inputs)
+                if skill.thread_safe:
+                    result = skill.run(state.video, **resolved)
+                else:
+                    with _SKILL_LOCKS[action["skill"]]:
+                        result = skill.run(state.video, **resolved)
             except Exception as e:  # a broken skill call is evidence, not a fatal error
                 result = {"observations": [],
                           "summary": f"skill call failed: {type(e).__name__}: {e}"}

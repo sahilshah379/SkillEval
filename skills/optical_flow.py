@@ -37,6 +37,7 @@ class OpticalFlow(Skill):
         "complaints. args: num_samples (int, default 10), start (float sec), end (float sec)."
     )
     modalities = ["video"]
+    thread_safe = True  # cv2/numpy only, no shared state
 
     def run(self, video_path, num_samples=10, start=None, end=None, **kwargs):
         video = ensure_local(video_path)

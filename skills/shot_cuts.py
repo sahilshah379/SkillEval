@@ -14,6 +14,7 @@ class ShotCuts(Skill):
         "('00:03-00:06 close-up'), missing/extra cuts, and unstable editing. args: none."
     )
     modalities = ["video"]
+    thread_safe = True  # scenedetect opens its own capture per call
 
     def run(self, video_path, **kwargs):
         video = ensure_local(video_path)

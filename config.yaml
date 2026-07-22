@@ -47,8 +47,11 @@ taxonomy:
 
 # Agent loop parameters.
 agent:
-  max_iterations: 8            # hard cap on skill-calling iterations per (video, issue)
+  model: gpt-5-mini            # LLM driving the decide/synthesize/finalize loop
+                               # (vlm_frame_qa keeps its own default model for visual judgment)
+  max_iterations: 4            # hard cap on skill-calling iterations per (video, issue)
   confidence_threshold: 0.85   # stop early once the agent is this confident either way
   patience: 2                  # stop after this many consecutive iterations with no new evidence
 
+max_workers: 8                 # concurrent (sample, issue) investigations
 output_dir: results

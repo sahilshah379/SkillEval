@@ -8,6 +8,7 @@ runs the agent loop for every (sample, issue) pair and writes verdicts to output
 """
 import argparse
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import yaml
@@ -41,6 +42,7 @@ def main():
     out_dir = Path(config.get("output_dir", "results")) / args.dataset
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    pending = []
     for i, sample in enumerate(samples):
         out_path = out_dir / f"sample_{i:03d}.json"
         if out_path.exists():
@@ -49,19 +51,32 @@ def main():
         if not sample["output"]:
             print(f"  sample {i}: no output video, skipping")
             continue
+        pending.append((i, sample))
+
+    def investigate(sample, issue):
         video = sample["output"][0]  # the generated video under evaluation
-        verdicts = []
-        for issue in categories:
-            print(f"  sample {i} :: {issue['name']}")
-            try:
-                verdict = runner.run(video, issue, sample=sample).to_dict()
-            except Exception as e:
-                print(f"    failed: {e}")
-                verdict = {"video": video, "issue": issue["name"], "exists": None,
-                           "confidence": 0.0, "localization": None, "reasoning": "",
-                           "error": f"{type(e).__name__}: {e}"}
-            verdicts.append(verdict)
-        out_path.write_text(json.dumps(verdicts, indent=2))
+        try:
+            return runner.run(video, issue, sample=sample).to_dict()
+        except Exception as e:
+            return {"video": video, "issue": issue["name"], "exists": None,
+                    "confidence": 0.0, "localization": None, "reasoning": "",
+                    "error": f"{type(e).__name__}: {e}"}
+
+    # every (sample, issue) investigation is independent -> run them concurrently;
+    # a sample's file is written once all of its issues have finished
+    verdicts = {i: [None] * len(categories) for i, _ in pending}
+    remaining = {i: len(categories) for i, _ in pending}
+    with ThreadPoolExecutor(max_workers=config.get("max_workers", 8)) as pool:
+        futures = {pool.submit(investigate, sample, issue): (i, j)
+                   for i, sample in pending for j, issue in enumerate(categories)}
+        for n, future in enumerate(as_completed(futures), 1):
+            i, j = futures[future]
+            verdict = verdicts[i][j] = future.result()
+            status = f"error: {verdict['error']}" if verdict.get("error") else f"exists={verdict['exists']}"
+            print(f"  [{n}/{len(futures)}] sample {i} :: {verdict['issue']} -> {status}")
+            remaining[i] -= 1
+            if remaining[i] == 0:
+                (out_dir / f"sample_{i:03d}.json").write_text(json.dumps(verdicts[i], indent=2))
 
     print(f"Done. Results in {out_dir}")
 
