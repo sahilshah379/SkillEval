@@ -1,0 +1,54 @@
+# Datasets: one entry per model whose generations we evaluate.
+# `path` points at a directory containing a mapping.json (samples with prompt,
+# input media, and output video URLs).
+datasets:
+  kimi:
+    path: /path/to/kimi/generations
+  seedance:
+    path: /Users/bytedance/Documents/skill_eval_data/seedance
+
+# Issue taxonomy: top-N categories to evaluate per run.
+# Hand-written from recurring badcase feedback; to be replaced by taxonomy discovery.
+taxonomy:
+  top_n: 6
+  categories:
+    - name: character_identity_error
+      description: >-
+        A character's identity breaks: the face swaps to a different person, gets corrupted
+        or distorted, or the person shown does not match the name/role assigned in the
+        prompt. Includes role confusion where characters turn into someone else mid-video
+        even when every character is explicitly tagged (e.g. with @references).
+    - name: reference_consistency_error
+      description: >-
+        Generated frames do not stay consistent with the provided reference material:
+        the scene, first/last frame, or visual style drifts from the reference images,
+        and scene restoration fidelity is poor (environments, props, or layouts differ
+        from what the reference depicts).
+    - name: dialogue_speech_error
+      description: >-
+        Dialogue or speech is wrong: mispronounced or incomplete lines, speech in the
+        wrong language, lips not moving while speech plays, lip-sync mismatch, or the
+        character speaking when no lines were set in the prompt (automatic speech).
+    - name: duplicate_character
+      description: >-
+        The same character appears more than once simultaneously (twins/multiple-births
+        artifact): two or more people in frame that look exactly alike when the prompt
+        specifies a single distinct person.
+    - name: instruction_noncompliance
+      description: >-
+        The video ignores the prompt's instructions as a whole: required actions, poses,
+        or settings are wrong (e.g. asked to stand but sits), negative constraints are
+        violated, or the output is a simplified/dumbed-down version of what was asked.
+    - name: motion_physics_error
+      description: >-
+        Motion or physics is implausible: limbs/torso clipping or penetrating each other,
+        messed-up poses, unstable or jerky motion sequences, jump cuts, or objects
+        appearing/disappearing out of thin air.
+
+# Agent loop parameters.
+agent:
+  max_iterations: 8            # hard cap on skill-calling iterations per (video, issue)
+  confidence_threshold: 0.85   # stop early once the agent is this confident either way
+  patience: 2                  # stop after this many consecutive iterations with no new evidence
+
+output_dir: results

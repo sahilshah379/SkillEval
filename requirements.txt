@@ -1,0 +1,17 @@
+# core
+openai
+pyyaml
+numpy
+opencv-contrib-python   # contrib build: includes CSRT tracker (replaces opencv-python)
+pillow
+
+# skill backends (each optional — skills degrade gracefully if missing)
+faster-whisper          # asr
+easyocr                 # ocr
+mediapipe               # pose_hands, lip_sync
+ultralytics             # object_grounding
+scenedetect             # shot_cuts
+insightface             # face_identity
+onnxruntime             # face_identity
+transformers            # depth_3d
+torch                   # depth_3d
